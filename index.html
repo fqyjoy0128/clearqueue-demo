@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClearQueue — Random Queue Prototype</title>
+<style>
+*{box-sizing:border-box}
+:root{
+  --black:#050605;
+  --panel:#0c100d;
+  --panel2:#111712;
+  --green:#b7ff32;
+  --green2:#78ff00;
+  --muted:#879087;
+  --line:#273027;
+  --white:#f4f7f2;
+}
+body{
+  margin:0;min-height:100vh;background:#020302;color:var(--white);
+  font-family:Inter,Arial,Helvetica,sans-serif;display:flex;align-items:center;justify-content:center;
+}
+.stage{
+  width:min(900px,96vw);min-height:780px;display:grid;
+  grid-template-columns:1fr;padding:24px;
+}
+.info{
+  background:#080a08;border:1px solid var(--line);border-radius:25px;padding:25px;
+  display:flex;flex-direction:column;justify-content:space-between;
+}
+.logo{font-size:25px;font-weight:900;letter-spacing:-1px;color:var(--green)}
+.tag{margin-top:8px;color:#899389;font-size:13px;line-height:1.55}
+.flow{margin-top:32px}
+.flow div{
+  padding:11px 0;border-bottom:1px solid #1b211c;font-size:12px;color:#555e56;
+}
+.flow div.active{color:var(--green);font-weight:800}
+.flow div.done{color:#9aa39b}
+.hint{font-size:11px;line-height:1.6;color:#687168}
+
+.device{
+  background:#0b0e0b;border:1px solid #202720;border-radius:32px;padding:20px;
+  box-shadow:0 20px 70px rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;
+}
+.screen{
+  width:min(650px,100%);min-height:720px;background:var(--black);
+  border:1px solid #263026;border-radius:23px;overflow:hidden;position:relative;
+  display:flex;flex-direction:column;
+}
+.topbar{
+  height:61px;padding:0 25px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--line);font-size:12px;
+}
+.brand{font-weight:900;letter-spacing:-.5px;color:var(--green)}
+.status{color:#737d74}
+.content{
+  flex:1;padding:45px 52px;display:flex;flex-direction:column;justify-content:center;
+}
+h1{font-size:49px;line-height:.98;letter-spacing:-3px;margin:0 0 20px}
+h2{font-size:30px;letter-spacing:-1.3px;margin:0 0 18px}
+p{color:#899389;line-height:1.6;margin:0 0 22px}
+.eyebrow{font-size:10px;font-weight:900;letter-spacing:1.8px;color:var(--green);margin-bottom:13px}
+button{
+  border:1px solid var(--green);background:var(--green);color:#050605;
+  border-radius:11px;min-height:53px;padding:0 22px;font-size:13px;font-weight:900;
+  cursor:pointer;margin-top:13px;transition:.15s;
+}
+button:hover{background:#d1ff75;transform:translateY(-1px)}
+button.secondary{background:transparent;color:var(--green)}
+button.secondary:hover{background:#101810}
+.button-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+
+.hero-box{
+  border:1px solid var(--line);background:linear-gradient(145deg,#0b100b,#060806);
+  border-radius:19px;padding:25px;margin-top:10px;
+}
+.ticket{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:16px 0;border-top:1px solid var(--line);font-size:12px;
+}
+.ticket strong{color:var(--green)}
+
+.draw-area{text-align:center}
+.draw-number{
+  font-size:108px;line-height:.9;font-weight:900;letter-spacing:-7px;color:var(--green);
+  font-variant-numeric:tabular-nums;text-shadow:0 0 30px rgba(183,255,50,.16);
+}
+.draw-label{color:#727c73;font-size:12px;margin-top:13px}
+.draw-line{height:1px;background:var(--line);margin:28px 0}
+.spinner{
+  width:120px;height:120px;border:2px solid #293329;border-top-color:var(--green);
+  border-radius:50%;margin:0 auto 28px;animation:spin 1s linear infinite;display:none;
+}
+.spinner.show{display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.rules{border-top:1px solid var(--line);margin-top:12px}
+.rule{
+  display:flex;justify-content:space-between;gap:20px;padding:14px 0;
+  border-bottom:1px solid var(--line);font-size:13px
+}
+.rule span:last-child{font-weight:800;color:var(--green);text-align:right}
+.queue-card{
+  border:1px solid var(--line);background:#090d09;border-radius:18px;padding:22px;margin-top:10px
+}
+.queue-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:20px}
+.metric{background:#111711;padding:17px;border-radius:12px;border:1px solid #202820}
+.metric small{display:block;color:#6e796f;margin-bottom:7px}
+.metric strong{font-size:21px;color:var(--green)}
+.progress{height:7px;background:#1c231d;border-radius:99px;overflow:hidden;margin:19px 0}
+.progress i{display:block;height:100%;width:18%;background:var(--green);box-shadow:0 0 14px rgba(183,255,50,.45)}
+
+.band{
+  width:190px;height:88px;border:13px solid var(--green);border-radius:44px;
+  margin:15px auto 28px;position:relative;box-shadow:0 0 22px rgba(183,255,50,.12)
+}
+.band:after{content:"CQ-027";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+font-weight:900;font-size:17px;color:var(--green)}
+.tap{
+  width:105px;height:105px;border:2px dashed #607060;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;margin:12px auto;font-size:11px;color:#879087;
+}
+.success{border:1px solid var(--line);background:#090d09;border-radius:18px;padding:24px;text-align:center}
+.check{
+  width:55px;height:55px;border-radius:50%;background:var(--green);color:#050605;
+  display:grid;place-items:center;margin:0 auto 18px;font-size:23px;font-weight:900;
+}
+.alert{
+  background:#0f160d;border:1px solid var(--green);color:var(--white);border-radius:18px;
+  padding:22px;margin-top:18px;box-shadow:0 0 25px rgba(183,255,50,.08);animation:pulse 1.1s infinite;
+}
+.alert strong{color:var(--green)}
+@keyframes pulse{0%,100%{box-shadow:0 0 8px rgba(183,255,50,.05)}50%{box-shadow:0 0 25px rgba(183,255,50,.18)}}
+.ending{
+  border:1px solid var(--line);background:#090d09;border-radius:18px;padding:25px;margin-top:15px
+}
+.footer{
+  border-top:1px solid var(--line);padding:13px 25px;font-size:9px;color:#555f56;
+  display:flex;justify-content:space-between
+}
+.green-text{color:var(--green)}
+.pill{
+  display:inline-block;border:1px solid #36502a;color:var(--green);border-radius:99px;
+  padding:6px 10px;font-size:10px;font-weight:800;margin-bottom:18px
+}
+.purchase-card{background:#fff;color:#18202a;border-radius:16px;overflow:hidden;margin:8px 0 16px;box-shadow:0 12px 35px #0005}
+.purchase-brand{background:#0879d1;color:#fff;padding:15px 20px;font-size:18px;font-weight:900;letter-spacing:-.4px}
+.purchase-body{padding:21px}.purchase-kicker{font-size:10px;font-weight:800;letter-spacing:1.2px;color:#596575;margin-bottom:10px}
+.purchase-body h2{color:#15202c;margin-bottom:8px}.purchase-body p{color:#5c6672;font-size:13px;margin-bottom:11px}
+.purchase-meta{border-top:1px solid #e4e8ec;margin-top:17px;padding-top:13px;color:#354052;font-size:12px;line-height:1.8}
+.demo-note{font-size:10px!important;color:#839087!important;margin:8px 0 0!important}
+.ticketmaster-link{display:inline-block;margin:9px 0 0;color:#1374bb;font-size:12px;font-weight:800;text-decoration:none}
+@media(max-width:850px){
+  body{align-items:flex-start}.stage{grid-template-columns:1fr;padding:12px;width:100%}
+  .screen{min-height:650px}
+}
+</style>
+</head>
+
+<body>
+<div class="stage">
+<main class="device">
+<div class="screen">
+  <div class="topbar">
+    <div class="brand">CLEARQUEUE</div>
+    <div class="status" id="topStatus">Prototype</div>
+  </div>
+  <section class="content" id="app"></section>
+  <div class="footer">
+    <span>SYDNEY PRESALE / TEST MODE</span>
+    <span id="screenNo">01 / 10</span>
+  </div>
+</div>
+</main>
+</div>
+
+<script>
+const app=document.getElementById('app');
+const topStatus=document.getElementById('topStatus');
+const screenNo=document.getElementById('screenNo');
+
+let current='welcome';
+let drawTimer=null;
+let drawing=false;
+
+const screens={
+welcome:{
+no:'01',status:'Start',
+html:`
+<div class="eyebrow">TAYLOR SWIFT · SYDNEY PRESALE</div>
+<h1>Get your place.<br>Then step away.</h1>
+<p>ClearQueue uses a randomised queue number instead of a stressful first-come-first-served race. Your place can then be held by a wearable band.</p>
+<div class="hero-box">
+  <div class="ticket"><span>Tickets available</span><strong>12,000</strong></div>
+  <div class="ticket"><span>Queue allocation</span><strong>RANDOMISED</strong></div>
+  <div class="ticket"><span>Place holder</span><strong>CLEARQUEUE BAND</strong></div>
+</div>
+<button onclick="go('draw')">ENTER PRESALE</button>
+`
+},
+draw:{
+no:'02',status:'Random Draw',
+html:`
+<div class="draw-area">
+<div class="eyebrow">RANDOM QUEUE ALLOCATION</div>
+<h2>Drawing your queue number</h2>
+<p>Your number is randomly generated. You don't need to compete for a faster click.</p>
+<div class="draw-line"></div>
+<div class="spinner" id="spinner"></div>
+<div class="draw-number" id="drawNumber">----</div>
+<div class="draw-label">QUEUE NUMBER</div>
+<button id="drawBtn" onclick="startDraw()">DRAW MY NUMBER</button>
+</div>
+`
+},
+result:{
+no:'03',status:'Number allocated',
+html:`
+<div class="draw-area">
+<div class="pill">NUMBER ALLOCATED</div>
+<div class="draw-number">#4832</div>
+<div class="draw-label">YOUR RANDOM QUEUE NUMBER</div>
+<div class="draw-line"></div>
+<h2>That's your place.</h2>
+<p>This number is now reserved for your account. Everyone receives their position before entering the queue.</p>
+<button onclick="go('rules')">CONTINUE TO QUEUE</button>
+</div>
+`
+},
+rules:{
+no:'04',status:'Rules',
+html:`
+<div class="eyebrow">BEFORE YOU JOIN</div>
+<h2>How does this queue work?</h2>
+<div class="rules">
+<div class="rule"><span>Allocation</span><span>Randomised</span></div>
+<div class="rule"><span>Your number</span><span>#4832</span></div>
+<div class="rule"><span>Tickets available</span><span>12,000</span></div>
+<div class="rule"><span>One account</span><span>One queue position</span></div>
+<div class="rule"><span>Bot protection</span><span>Active</span></div>
+</div>
+<p style="margin-top:18px">Your number stays linked to you even if you step away from the screen.</p>
+<button onclick="go('queue')">JOIN QUEUE</button>
+`
+},
+queue:{
+no:'05',status:'Queue active',
+html:`
+<div class="eyebrow">YOU'RE IN THE QUEUE</div>
+<div class="draw-number" style="font-size:72px">#4832</div>
+<div class="draw-label">YOUR QUEUE POSITION</div>
+<div class="queue-card">
+<div class="queue-grid">
+<div class="metric"><small>Estimated wait</small><strong>35–50 min</strong></div>
+<div class="metric"><small>Ticket outlook</small><strong>LIKELY</strong></div>
+</div>
+<div class="progress"><i></i></div>
+<small style="color:#6f796f">Position updates automatically. You can collect a band and leave the station.</small>
+</div>
+<button onclick="go('band')">HOLD MY PLACE</button>
+`
+},
+band:{
+no:'06',status:'Band',
+html:`
+<div style="text-align:center">
+<div class="eyebrow">HOLD MY PLACE</div>
+<h2>Take your queue with you.</h2>
+<p>Collect a ClearQueue Band. It represents your queue identity while you're away from the screen.</p>
+<div class="band"></div>
+<div class="tap">TAP BAND<br>HERE</div>
+<p style="font-size:11px">Band ID: <strong class="green-text">CQ-027</strong></p>
+<button onclick="go('away')">ACTIVATE BAND</button>
+</div>
+`
+},
+away:{
+no:'07',status:'Place secured',
+html:`
+<div class="success">
+<div class="check">✓</div>
+<div class="eyebrow">BAND CONNECTED</div>
+<h2>Place secured.</h2>
+<p>Your queue number <strong class="green-text">#4832</strong> is protected.</p>
+<p>You can leave the station. Your band will alert you when your turn is approaching.</p>
+</div>
+<button onclick="go('alert')">SIMULATE QUEUE PROGRESS</button>
+`
+},
+alert:{
+no:'08',status:'Band vibrating',
+html:`
+<div class="eyebrow">CLEARQUEUE BAND · ALERT</div>
+<h1>Your turn<br>is here.</h1>
+<div class="alert">
+<strong>● ● ● &nbsp; BAND VIBRATING</strong><br><br>
+Your place is ready. Return to the station and tap your band to continue.
+</div>
+<p style="margin-top:22px">Follow the reminder on your band, then tap it on the station reader.</p>
+<button onclick="go('turn')">I'M BACK AT THE STATION</button>
+`
+},
+turn:{
+no:'09',status:'Tap band to continue',
+html:`
+<div style="text-align:center">
+<div class="eyebrow">IT'S YOUR TURN</div>
+<h2>Tap your band<br>to open your ticket window.</h2>
+<div class="band"></div>
+<div class="tap">TAP BAND<br>HERE</div>
+<p style="font-size:11px">Band CQ-027 · Queue #4832</p>
+<button onclick="go('ticket')">BAND TAPPED · CONTINUE</button>
+</div>
+`
+},
+ticket:{
+no:'10',status:'Ticket secured',
+html:`
+<div class="eyebrow">TICKET WINDOW · COMPLETE</div>
+<h2>Your ticket is<br>secured.</h2>
+<div class="ending">
+<p>Your queue number: <strong class="green-text">#4832</strong></p>
+<p>Your ticket window is complete. Before you go, return your ClearQueue Band to the station.</p>
+</div>
+<button onclick="go('returnBand')">RETURN MY BAND</button>
+`
+},
+returnBand:{
+no:'11',status:'Return band',
+html:`
+<div style="text-align:center">
+<div class="eyebrow">SESSION CHECKOUT</div>
+<h2>Please return<br>your ClearQueue Band.</h2>
+<p>Place band CQ-027 back on the station return point. Keep it there until the screen confirms it has been received.</p>
+<div class="band"></div>
+<div class="tap">RETURN BAND<br>HERE</div>
+<button onclick="go('returned')">I'VE RETURNED THE BAND</button>
+</div>
+`
+},
+returned:{
+no:'12',status:'Band returned',
+html:`
+<div class="success" style="text-align:center">
+<div class="check">✓</div>
+<div class="eyebrow">RETURN CONFIRMED</div>
+<h2>Band returned<br>successfully.</h2>
+<p>ClearQueue Band <strong class="green-text">CQ-027</strong> has been checked in. Thank you for returning it.</p>
+</div>
+<button onclick="go('concert')">CONTINUE</button>
+`
+},
+concert:{
+no:'13',status:'Enjoy the show',
+html:`
+<div style="text-align:center">
+<div class="eyebrow">CLEARQUEUE · SESSION COMPLETE</div>
+<div class="check">♪</div>
+<h1>Enjoy your<br>concert.</h1>
+<p>Your queue journey is complete. Have an amazing time at the show!</p>
+<button onclick="go('purchase')">Go buy tickets</button>
+</div>
+`
+},
+purchase:{
+no:'14',status:'Ticketmaster-style demo',
+html:`
+<div class="eyebrow">CLEARQUEUE · TICKET HANDOFF</div>
+<h2>Choose your next show.</h2>
+<div class="purchase-card">
+  <div class="purchase-brand">ticketmaster</div>
+  <div class="purchase-body">
+    <div class="purchase-kicker">CONCERT · PROTOTYPE EXAMPLE</div>
+    <h2>BLACKPINK</h2>
+    <p>WORLD TOUR · SYDNEY</p>
+    <div class="purchase-meta"><b>Qudos Bank Arena</b><br>Sydney Olympic Park, NSW<br>Date and ticket availability: check official listing</div>
+    <p class="demo-note">Sample event card for the ClearQueue prototype. This is not a confirmed event listing.</p>
+    <a class="ticketmaster-link" href="https://www.ticketmaster.com.au/blackpink-tickets/artist/2590072" target="_blank" rel="noopener">View BLACKPINK on Ticketmaster AU ↗</a>
+  </div>
+</div>
+<p>The sample purchase page uses a Ticketmaster-inspired event layout. Use the official link to check current event details and availability.</p>
+<div class="button-row"><button onclick="window.open('https://www.ticketmaster.com.au/blackpink-tickets/artist/2590072','_blank','noopener')">VIEW OFFICIAL TICKETS</button><button class="secondary" onclick="go('concert')">BACK</button></div>
+`
+}
+};
+
+function go(step){
+  current=step;
+  render();
+}
+
+function startDraw(){
+  if(drawing)return;
+  drawing=true;
+  const btn=document.getElementById('drawBtn');
+  const spinner=document.getElementById('spinner');
+  const number=document.getElementById('drawNumber');
+  btn.disabled=true;
+  btn.textContent='DRAWING...';
+  spinner.classList.add('show');
+
+  let elapsed=0;
+  drawTimer=setInterval(()=>{
+    elapsed+=80;
+    number.textContent='#'+String(Math.floor(1000+Math.random()*8999));
+    if(elapsed>=2200){
+      clearInterval(drawTimer);
+      spinner.classList.remove('show');
+      number.textContent='#4832';
+      drawing=false;
+      setTimeout(()=>go('result'),700);
+    }
+  },80);
+}
+
+function restart(){
+  if(drawTimer)clearInterval(drawTimer);
+  drawing=false;
+  go('welcome');
+}
+
+function render(){
+  const s=screens[current];
+  app.innerHTML=s.html;
+  topStatus.textContent=s.status;
+  screenNo.textContent=s.no+' / 14';
+}
+render();
+</script>
+</body>
+</html>
+
